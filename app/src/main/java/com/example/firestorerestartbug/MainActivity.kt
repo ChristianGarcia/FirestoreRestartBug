@@ -1,43 +1,35 @@
 package com.example.firestorerestartbug
 
-import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.firestorerestartbug.ui.theme.FirestoreRestartBugTheme
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            FirestoreRestartBugTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
-                ) {
-                    Greeting("Android")
-                }
+
+    private lateinit var registration: ListenerRegistration
+
+    override fun onStart() {
+        super.onStart()
+        readFirestore()
+    }
+
+    private fun readFirestore() {
+        registration = Firebase.firestore.collection("config").document("single-id")
+            .addSnapshotListener { snapshot, error ->
+                val contents = snapshot?.toObject(FirestoreResponse::class.java)
+                Timber.d("Firestore contents: $contents")
+                Timber.d("Firestore error: $error")
             }
-        }
+    }
+
+    override fun onStop() {
+        registration.remove()
+        super.onStop()
     }
 }
 
-@Composable
-fun Greeting(name: String) {
-    Text(text = "Hello $name!")
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    FirestoreRestartBugTheme {
-        Greeting("Android")
-    }
-}
+data class FirestoreResponse(
+    val enabled: Boolean = false,
+)
